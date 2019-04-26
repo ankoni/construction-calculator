@@ -1,0 +1,58 @@
+
+.count, .operation, .count_tile {
+    text-align: center;
+    width: 330px;
+}
+
+.count > .form_count > select,
+.count > input {
+    width: 100%;
+}
+
+.open_table {
+    display: block;
+    margin: 10px auto;
+}
+.operation {
+    display: none;
+}
+.form_add {
+    display: none;
+}
+
+label {
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.count_tile > .tile_size > input {
+    width: 49%;
+    display: inline-block;
+    vertical-align: top;
+}
+
+.count_tile > .wall_size > input {
+    width: 100%;
+}
+
+.door, .window {
+    display: none;
+}
+
+.add_window, .add_door {
+    display: block;
+    margin: 0 auto;
+}
+
+.window_size > .window >label,
+.door_size > .door > label {
+    position: absolute;
+    left: 0;
+}
+.close {
+    position: absolute;
+    right: 0;
+}
+.window > input, .door > input {
+    width: 90%;
+}
