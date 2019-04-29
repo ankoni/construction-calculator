@@ -20,39 +20,54 @@
     display: none;
 }
 
-label {
-    font-size: 18px;
-    font-weight: 500;
-}
-
 .count_tile > .tile_size > input {
-    width: 49%;
     display: inline-block;
     vertical-align: top;
 }
 
-.count_tile > .wall_size > input {
-    width: 100%;
+.tile_size > label,
+.wall_size > label,
+.door_size > .door > label{
+    position: absolute;
+    right: 15px;
 }
 
-.door, .window {
+.door {
     display: none;
 }
 
-.add_window, .add_door {
-    display: block;
-    margin: 0 auto;
-}
-
-.window_size > .window >label,
-.door_size > .door > label {
+.close {
     position: absolute;
     left: 0;
 }
-.close {
-    position: absolute;
-    right: 0;
+
+.total_div {
+    margin-top: 20px;
+    height: 70px;
+    width: 100%;
+    border: 1px solid black;
+    border-radius: 5px;
 }
-.window > input, .door > input {
-    width: 90%;
+.total_div > label {
+    margin: 0;
+    text-decoration: underline;
+}
+
+.totalAmount {
+    height: 16px;
+    font-weight: bold;
+}
+
+button {
+    display: block;
+    margin: 10px auto;
+}
+
+.div_btn {
+    height: 50px;
+}
+
+label {
+    margin-top: 10px;
+    margin-bottom: 0;
 }

@@ -1,23 +1,26 @@
 <?php
 
+error_reporting (E_ALL);
+
 class TypeHobnailsDB {
     public $host;
     public $dbName;
     public $user;
     public $password;
     public $connection;
-    public $dbTableName;
+    public $dbTableName = "dbHobnails";
     public $records;
 
     //db connect
-    public function __construct($host, $dbName, $user, $password, $dbTableName) {
-        $this->host = $host;
-        $this->dbName = $dbName;
-        $this->user = $user;
-        $this->password = $password;
-        $this->dbTableName = $dbTableName;
+    public function __construct($config) {
+        $this->host = $config['host'];
+        $this->dbName = $config['dbName'];
+        $this->user = $config['user'];
+        $this->password = $config['password'];
         try {
             $this->connection = new PDO('mysql:host=' . $this->host . ';dbname=' . $this->dbName, $this->user, $this->password);
+            $this->connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $this->connection->exec('SET NAMES utf8');
         } catch (PDOException $e) {
             echo $e->getMessage();
         }
@@ -27,7 +30,7 @@ class TypeHobnailsDB {
     public function getRecords() {
         try {
             // Get all records
-            $sth = $this->connection->prepare('SELECT * FROM '. $this->dbTableName);
+            $sth = $this->connection->prepare('SELECT * FROM '.$this->dbTableName);
             $sth->execute();
             return $this->records = $sth->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
@@ -38,7 +41,7 @@ class TypeHobnailsDB {
     //request insert record
     public function insertRecord($typeHb, $wt) {
         try {
-            $stmt = $this->connection->prepare('INSERT INTO '.$this->dbName. ' (typeHb, wt) VALUES (:typeHb, :wt)');
+            $stmt = $this->connection->prepare('INSERT INTO '.$this->dbTableName. ' (typeHb, wt) VALUES (:typeHb, :wt)');
             $stmt->bindParam(':typeHb', $typeHb);
             $stmt->bindParam(':wt', $wt);
             $stmt->execute();
@@ -50,7 +53,7 @@ class TypeHobnailsDB {
     //select wt Hobnails
     public function selectById($posted) {
         try {
-            $bid = $this->connection->prepare('SELECT wt FROM '. $this->dbName . ' WHERE id = '.$posted);
+            $bid = $this->connection->prepare('SELECT wt FROM '. $this->dbTableName . ' WHERE id = '.$posted);
             $bid->execute();
             $test = $bid->fetch(PDO::FETCH_NUM);
             echo $test[0];
@@ -62,7 +65,8 @@ class TypeHobnailsDB {
     //delete records
     public function deleteRow($posted) {
         try {
-            $stmt = $this->connection->prepare('DELETE FROM '. $this->dbName .' WHERE id IN (' . implode(",", $posted). ')');
+            $posted = implode(",", $posted);
+            $stmt = $this->connection->prepare('DELETE FROM '. $this->dbTableName .' WHERE id IN (' . $posted . ')');
             $stmt->execute();
         } catch (PDOException $e) {
             echo $e->getMessage();
@@ -71,7 +75,7 @@ class TypeHobnailsDB {
 }
 
 $config = parse_ini_file('config/config.ini');
-$entry = new TypeHobnailsDB($config['host'], $config['dbName'], $config['user'], $config['password'], $config['dbName']);
+$entry = new TypeHobnailsDB($config);
 
 //all row
 $results = $entry->getRecords();
@@ -97,7 +101,10 @@ if (isset($_POST["deleteId"])) {
     <title>Счетчик</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <link rel="stylesheet" href="css/style.css">
-    <script src="http://code.jquery.com/jquery-3.4.0.min.js" integrity="sha256-BJeo0qm959uMBGb65z40ejJYGSgR7REI4+CW1fNKwOg=" crossorigin="anonymous"></script>
+    <script
+            src="http://code.jquery.com/jquery-3.4.0.js"
+            integrity="sha256-DYZMCC8HTC+QDr5QNaIcfR7VSPtcISykd+6eSmBW5qo="
+            crossorigin="anonymous"></script>
 
 </head>
 <body>
@@ -113,7 +120,7 @@ if (isset($_POST["deleteId"])) {
                 //select typeHb
                 foreach ($results as $result) {
                     //last selected option
-                    if (isset($_POST['typeHobnail']) && $_POST['typeHobnail'] == $result['id']) {
+                    if (/*isset($_POST['typeHobnail']) &&*/ $_POST['typeHobnail'] == $result['id']) {
                         ?>
                         <option value="<?=$result['id']?>" selected><?=$result['typeHb']?></option>
                         <?php
@@ -173,7 +180,7 @@ if (isset($_POST["deleteId"])) {
             <form action="<?php echo $_SERVER['PHP_SELF']; ?>" method="post" name="add" id="add">
                 <input type="text" name="inputType" form="add" placeholder="Вид" id="inputType">
                 <input type="number" step="0.01" name="inputWt" form="add" placeholder="Вес" id="inputWt">
-                <button type="submit" class="" form="add">Отправить</button>
+                <button type="submit" form="add">Отправить</button>
             </form>
         </div>
     </div> <!--div operation ~ total table, add records and delete this-->
@@ -185,101 +192,38 @@ if (isset($_POST["deleteId"])) {
 
         <label for="">Плитка/плиты:</label>
         <div class="tile_size">
-            <input type="number" step='0.1' id="tile_len" placeholder="Длина(см)" onchange="inputTileLen(this)">
-            <input type="number" step='0.1' id="tile_w" placeholder="Ширина(см)" onchange="inputTileW(this)">
-            <input type="number" step='0.01' id="tile_s_cm" placeholder="Площадь(кв.см)" onchange="inputScm(this)">
-            <input type="number" step='0.0001' id="tile_s_m" placeholder="Площадь(кв.м)" onchange="inputSm(this)">
+            <input type="text" step="any" id="tile_len" placeholder="Длина(см)" onchange="inputTileLen(this)">
+            <input type="text" step="any" id="tile_w" placeholder="Ширина(см)" onchange="inputTileW(this)">
+            <input type="text" step="any" id="tile_s_cm" placeholder="Площадь(кв.см)" onchange="inputScm(this)">
+            <input type="text" step="any" id="tile_s_m" placeholder="Площадь(кв.м)" onchange="inputSm(this)" required>
         </div>
 
         <label for="">Площадь поверхности:</label>
         <div class="wall_size">
-            <input type="number" id="surface_square" placeholder="Площадь (кв.м)">
+            <input type="text" step="any" id="surface_square" placeholder="Площадь (кв.м)" onchange="inputSurface(this)" required>
         </div>
 
-        <label for="">Двери:</label>
+        <label for="">Окна/Двери:</label>
         <div class="door_size">
-            <div class="door door_one">
-                <label for="">1:</label>
-                <input type="number" placeholder="Длина(м)">
-                <input type="number" placeholder="Ширина(м)">
-                <input type="number" name="" id="" placeholder="Площадь(кв.м)">
-                <button type="button" class="close" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="door door_two">
-                <label for="">2:</label>
-                <input type="number" placeholder="Длина(м)">
-                <input type="number" placeholder="Ширина(м)">
-                <input type="number" name="" id="" placeholder="Площадь(кв.м)">
-                <button type="button" class="close" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="door door_three">
-                <label for="">3:</label>
-                <input type="number" placeholder="Длина(м)">
-                <input type="number" placeholder="Ширина(м)">
-                <input type="number" name="" id="" placeholder="Площадь(кв.м)">
-                <button type="button" class="close" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="door door_four">
-                <label for="">4:</label>
-                <input type="number" placeholder="Длина(м)">
-                <input type="number" placeholder="Ширина(м)">
-                <input type="number" name="" id="" placeholder="Площадь(кв.м)">
-                <button type="button" class="close" aria-label="Close">
+            <div class="door" id="door">
+                <input type="text" id="doorWinLen" onchange="doorWinLen(this)" placeholder="Длина(м)">
+                <input type="text" id="doorWinW" onchange="doorWinW(this)" placeholder="Ширина(м)">
+                <input type="text" id="doorWin" onchange="doorWinF(this)" placeholder="Площадь(кв.м)">
+                <button type="button" class="close" aria-label="Close" value="1">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
         </div>
         <button class="add_door" data-id="add_door">Добавить</button>
-        <label for="">Окна:</label>
-        <div class="window_size">
-            <div class="window window_one">
-                <label for="">1:</label>
-                <input type="number" placeholder="Длина(м)">
-                <input type="number" placeholder="Ширина(м)">
-                <input type="number" name="" id="" placeholder="Площадь(кв.м)">
-                <button type="button" class="close" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="window window_two">
-                <label for="">2:</label>
-                <input type="number" placeholder="Длина(м)">
-                <input type="number" placeholder="Ширина(м)">
-                <input type="number" name="" id="" placeholder="Площадь(кв.м)">
-                <button type="button" class="close" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="window window_three">
-                <label for="">3:</label>
-                <input type="number" placeholder="Длина(м)">
-                <input type="number" placeholder="Ширина(м)">
-                <input type="number" name="" id="" placeholder="Площадь(кв.м)">
-                <button type="button" class="close" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="window window_four">
-                <label for="">4:</label>
-                <input type="number" placeholder="Длина(м)">
-                <input type="number" placeholder="Ширина(м)">
-                <input type="number" name="" id="" placeholder="Площадь(кв.м)">
-                <button type="button" class="close" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
+        <input type="text" id="doorWindow" placeholder="Общая площадь окон и дверей" onchange="totalSWinDoor(this)"><br>
+
+        <div class="total_div">
+            <label>ИТОГО:</label>
+            <div class="totalAmount" id="totalAmount"></div>
         </div>
-        <button class="add_window" data-id="add_window">Добавить</button>
-        <label>ИТОГО:</label>
-        <div class="totalAmount"></div>
-
-
+        <button id="count">Рассчитать</button> 
+        <button id="clear_all">Очистить форму</button>
+        <div class="div_btn"></div>
     </div>
 
 </div>
@@ -303,103 +247,65 @@ if (isset($_POST["deleteId"])) {
             }
         });
 
-        var amount; //количество гвоздей
-        var total; //итоговый вес гвоздей
+        var amount = 0; //количество гвоздей
+        var total = 0; //итоговый вес гвоздей
+        var wtHobnail = document.getElementById('wtHobnail').textContent;
         //считает итоговый вес
         function amountValue(vl) {
+            
             amount = vl.value;
-            if (amount !== 0 || amount !== null || amount !== undefined) {
-                document.getElementById('totalWt').value = amount * wtHobnail;
-            }
+            total = amount * wtHobnail;
+            document.getElementById('totalWt').value = total;
         }
         //считает количество
         function totalWtValue(vl) {
             total = vl.value;
-            if (total !== 0 || total !== null || total !== undefined) {
-                document.getElementById('amountHobnail').value = (total / wtHobnail).toFixed(0);
-            }
+            document.getElementById('amountHobnail').value = (total / wtHobnail).toFixed(0);
         }
 
-        //открытие новых строк
-        var countDoor = 0;
-        $('.add_door').click(function () {
-            switch (countDoor) {
-                case 0:
-                    $('.door_one').css('display','block');
-                    countDoor++;
-                    break;
-                case 1:
-                    $('.door_two').css('display','block');
-                    countDoor++;
-                    break;
-                case 2:
-                    $('.door_three').css('display','block');
-                    countDoor++;
-                    break;
-                case 3:
-                    $('.door_four').css('display','block');
-                    countDoor=0;
-                    break;
-            }
-        });
-
-        var countWindow = 0;
-        $('.add_window').click(function () {
-            switch (countWindow) {
-                case 0:
-                    $('.window_one').css('display','block');
-                    countWindow++;
-                    break;
-                case 1:
-                    $('.window_two').css('display','block');
-                    countWindow++;
-                    break;
-                case 2:
-                    $('.window_three').css('display','block');
-                    countWindow++;
-                    break;
-                case 3:
-                    $('.window_four').css('display','block');
-                    countWindow=0;
-                    break;
-            }
-        });
-
-        //закрывает строку
-        $('.close').click(function () {
-            this.parentNode.style.display = 'none';
-        });
-
-        var tileLen; //длина плитки
-        var tileW; //ширина плитки
+        var tileLen = 0; //длина плитки
+        var tileW = 0; //ширина плитки
         var tileSCm; //площадь плитки в см.кв
-        var tileSM; //площадь плитки в м.кв
-
+        var tileSM = 0; //площадь плитки в м.кв
+        var surfaceSM = 0; //площадь поверхности м.кв.
+        var doorWindowLen = 0; //длина двери/окна
+        var doorWindowW = 0; //ширина двери/окна
+        var doorWin = 0; //площадь одной двери/окна
+        var totalDoorWindow = 0; //площадь всех дверей и окон
+        
         function inputTileLen(vl) {
             tileLen = vl.value; //запоминает значение input
             //если все значения есть, считает площадь в кв.см и кв.м
+            document.getElementById('tile_len').value = tileLen + ' см';
             if (tileW >= 0) {
-                document.getElementById('tile_s_cm').value = tileLen*tileW;
-                document.getElementById('tile_s_m').value = tileLen*tileW/10000;
+                tileSCm = tileLen*tileW;
+                tileSM = tileSCm/10000;
+                document.getElementById('tile_s_cm').value = tileSCm + ' кв.см';
+                document.getElementById('tile_s_m').value = tileSM + 'кв.м';
             }
         }
         function inputTileW(vl) {
             tileW = vl.value;//запоминает значение input
             //если все значения есть, считает площадь в кв.см и кв.м
+            document.getElementById('tile_w').value = tileW + ' см';
             if (tileLen >= 0) {
-                document.getElementById('tile_s_cm').value = tileLen*tileW;
-                document.getElementById('tile_s_m').value = tileLen*tileW/10000;
+                tileSCm = tileLen*tileW;
+                tileSM = tileSCm/10000;
+                document.getElementById('tile_s_cm').value = tileSCm+ ' кв.см';
+                document.getElementById('tile_s_m').value = tileSM + ' кв.м';
             }
         }
 
         //расчет м.кв. через см.кв
         function inputScm(vl) {
             tileSCm = vl.value;
-            if (tileSM == 0) {
+            document.getElementById('tile_s_cm').value = tileSCm + ' кв.см';
+            if (tileSCm == 0) {
                 document.getElementById('tile_len').disabled = false;
                 document.getElementById('tile_w').disabled = false;
             } else {
-                document.getElementById('tile_s_m').value = tileSCm/10000; //расчет
+                tileSM = tileSCm/10000;
+                document.getElementById('tile_s_m').value = tileSM + ' кв.м'; //расчет
                 //обнуление длина-ширина при вводе окончательной площади
                 document.getElementById('tile_len').disabled = true;
                 document.getElementById('tile_len').value = '';
@@ -410,11 +316,13 @@ if (isset($_POST["deleteId"])) {
         //расчет см.кв. через м.кв.
         function inputSm(vl) {
             tileSM = vl.value;
+            document.getElementById('tile_s_m').value = tileSM + ' кв.м'; 
             if (tileSM == 0) {
                 document.getElementById('tile_len').disabled = false;
                 document.getElementById('tile_w').disabled = false;
             } else {
-                document.getElementById('tile_s_cm').value = tileSM*10000; //расчет
+                tileSCm = tileSM*10000;
+                document.getElementById('tile_s_cm').value = tileSCm + ' кв.см'; //расчет
                 //обнуление длина-ширина при вводе окончательной площади
                 document.getElementById('tile_len').disabled = true;
                 document.getElementById('tile_len').value = '';
@@ -422,7 +330,105 @@ if (isset($_POST["deleteId"])) {
                 document.getElementById('tile_w').value = '';
             }
         }
+        
+        function inputSurface(vl) {
+            surfaceSM = vl.value;
+            document.getElementById('surface_square').value = surfaceSM + ' кв.м.';
+        }
 
+        function doorWinLen(vl) {
+            doorWindowLen = vl.value;
+            document.getElementById('doorWinLen').value = doorWindowLen + ' м';
+            if (doorWindowW > 0) {
+                doorWin = doorWindowW * doorWindowLen;
+                document.getElementById('doorWin').value = doorWin + ' кв.м';
+            }
+        }
+
+        function doorWinW(vl) {
+            doorWindowW = vl.value;
+            document.getElementById('doorWinW').value = doorWindowW + ' м';
+            if (doorWindowLen > 0) {
+                doorWin = doorWindowW * doorWindowLen;
+                document.getElementById('doorWin').value = doorWin + ' кв.м';
+            }
+        }
+
+        function doorWinF(vl) {
+            doorWin = vl.value;
+            document.getElementById('doorWin').value = doorWin + ' кв.м';
+            if (doorWin == 0) {
+                document.getElementById('doorWinLen').disabled = false;
+                document.getElementById('doorWinW').disabled = false;
+            } else {
+                document.getElementById('doorWinLen').value = '';
+                document.getElementById('doorWinLen').disabled = true;
+                document.getElementById('doorWinW').value = '';
+                document.getElementById('doorWinW').disabled = true;
+            }
+        }
+
+        //add new door/window
+        $('.add_door').click(function () {
+            if (document.getElementById('door').style.display == 'block') {
+                //считаем результат в одну переменную
+                if (doorWin > 0) {
+                    totalDoorWindow += parseFloat(doorWin);
+                    document.getElementById('doorWindow').value = totalDoorWindow + ' кв.м';
+                }
+
+                //обнуляем инпуты
+                var child = document.getElementById('door').childNodes;
+                doorWin = 0;
+                for (i=0; i<child.length;i++) {
+                    if (child[i].localName == "input") {
+                        child[i].disabled = false;
+                        child[i].value = '';
+                    }
+                }
+            } else {
+                document.getElementById('door').style.display = 'block';
+            }
+        });
+
+        //закрывает строку
+        $('.close').click(function () {
+            var elem = this.parentNode;
+            var elemId = elem.getAttribute('id');
+            elem.style.display = 'none';
+
+            var child = document.getElementById(elemId).childNodes;
+            for (i=0; i<child.length;i++) {
+                if (child[i].localName == "input") {
+                    child[i].value = '';
+                }
+            }
+        });
+
+        function totalSWinDoor(vl) {
+            totalDoorWindow = parseFloat(vl.value);
+            document.getElementById('doorWindow').value = totalDoorWindow + ' кв.м';
+        }
+
+
+
+        $('#count').click(function () {
+            console.log(tileSM, surfaceSM, totalDoorWindow);
+            if(tileSM > 0 && surfaceSM > 0) {
+                calc(tileSM, surfaceSM, totalDoorWindow);
+            }
+        });
+
+        function calc(tileSM, surfaceSM, doorWin) {
+            var result = (surfaceSM - doorWin)/tileSM;
+            result += result/10;
+            document.getElementById('totalAmount').innerText = result.toFixed(2);
+            document.getElementById('totalAmount').innerText += ' eд.';
+        }
+
+        $('#clear_all').click(function () {
+            location.reload(true);
+        });
         </script>
 </body>
 </html>
